@@ -28,6 +28,7 @@ function screenToTab(screen: Screen): Tab {
 export default function AppShell() {
   const [screen, setScreen] = useState<Screen>("home");
   const [history, setHistory] = useState<Screen[]>([]);
+  const [guaranteeOn, setGuaranteeOn] = useState(false);
 
   const navigate = useCallback(
     (target: string) => {
@@ -56,10 +57,20 @@ export default function AppShell() {
       <main>
         {screen === "home" && <HomeScreen onNavigate={navigate} />}
         {screen === "ride-options" && (
-          <RideOptionsScreen onNavigate={navigate} onBack={goBack} />
+          <RideOptionsScreen
+            onNavigate={navigate}
+            onBack={goBack}
+            guaranteeOn={guaranteeOn}
+            setGuaranteeOn={setGuaranteeOn}
+          />
         )}
         {screen === "business-guarantee" && (
-          <BusinessGuaranteeScreen onNavigate={navigate} onBack={goBack} />
+          <BusinessGuaranteeScreen
+            onNavigate={navigate}
+            onBack={goBack}
+            guaranteeOn={guaranteeOn}
+            setGuaranteeOn={setGuaranteeOn}
+          />
         )}
         {screen === "confirmation" && (
           <ConfirmationScreen onNavigate={navigate} />

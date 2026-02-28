@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   ArrowLeft,
   Shield,
@@ -17,6 +16,8 @@ import { getRiderInsight } from "@/lib/rider";
 interface BusinessGuaranteeScreenProps {
   onNavigate: (screen: string) => void;
   onBack: () => void;
+  guaranteeOn: boolean;
+  setGuaranteeOn: (value: boolean) => void;
 }
 
 const insight = getRiderInsight();
@@ -47,8 +48,9 @@ const features = [
 export default function BusinessGuaranteeScreen({
   onNavigate,
   onBack,
+  guaranteeOn,
+  setGuaranteeOn,
 }: BusinessGuaranteeScreenProps) {
-  const [guaranteeOn, setGuaranteeOn] = useState(false);
 
   return (
     <div className="flex flex-col pb-32">
@@ -146,7 +148,7 @@ export default function BusinessGuaranteeScreen({
           <button
             role="switch"
             aria-checked={guaranteeOn}
-            onClick={() => setGuaranteeOn((prev) => !prev)}
+            onClick={() => setGuaranteeOn(!guaranteeOn)}
             className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
               guaranteeOn ? "bg-success" : "bg-border"
             }`}
