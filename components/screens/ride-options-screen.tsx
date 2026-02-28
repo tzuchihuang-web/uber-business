@@ -6,7 +6,6 @@ import {
   Zap,
   Car,
   Shield,
-  ChevronRight,
   Sparkles,
   TrendingUp,
   BadgeCheck,
@@ -16,9 +15,12 @@ import { getRiderInsight } from "@/lib/rider";
 interface RideOptionsScreenProps {
   onNavigate: (screen: string) => void;
   onBack: () => void;
+  guaranteeOn: boolean;
+  setGuaranteeOn: (value: boolean) => void;
 }
 
 const insight = getRiderInsight();
+const BASE_RIDE_PRICE = 12.45;
 
 const rides = [
   {
@@ -26,7 +28,7 @@ const rides = [
     name: "UberX",
     desc: "Affordable rides",
     time: "4 min",
-    price: "$12.45",
+    price: BASE_RIDE_PRICE,
     icon: Car,
     selected: true,
   },
@@ -35,7 +37,7 @@ const rides = [
     name: "Comfort",
     desc: "Newer cars, extra legroom",
     time: "6 min",
-    price: "$18.20",
+    price: 18.2,
     icon: Car,
     selected: false,
   },
@@ -44,7 +46,7 @@ const rides = [
     name: "UberXL",
     desc: "Affordable rides for groups",
     time: "8 min",
-    price: "$22.80",
+    price: 22.8,
     icon: Users,
     selected: false,
   },
@@ -53,7 +55,7 @@ const rides = [
     name: "Black",
     desc: "Premium rides in luxury cars",
     time: "5 min",
-    price: "$35.00",
+    price: 35.0,
     icon: Shield,
     selected: false,
   },
@@ -62,7 +64,7 @@ const rides = [
     name: "Green",
     desc: "Electric or hybrid vehicles",
     time: "7 min",
-    price: "$14.10",
+    price: 14.1,
     icon: Zap,
     selected: false,
   },
@@ -71,7 +73,13 @@ const rides = [
 export default function RideOptionsScreen({
   onNavigate,
   onBack,
+  guaranteeOn,
+  setGuaranteeOn,
 }: RideOptionsScreenProps) {
+  const confirmPrice = guaranteeOn
+    ? (BASE_RIDE_PRICE + insight.price).toFixed(2)
+    : BASE_RIDE_PRICE.toFixed(2);
+
   return (
     <div className="flex flex-col pb-20">
       {/* Header */}
@@ -83,9 +91,7 @@ export default function RideOptionsScreen({
         >
           <ArrowLeft size={20} className="text-foreground" />
         </button>
-        <h1 className="text-lg font-bold text-foreground">
-          Choose a ride
-        </h1>
+        <h1 className="text-lg font-bold text-foreground">Choose a ride</h1>
       </header>
 
       {/* Route summary */}
@@ -155,26 +161,103 @@ export default function RideOptionsScreen({
           {/* Discount footnote */}
           {insight.discountEligible && (
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              You qualify for business rider discounts on select
-              ride types.
+              You qualify for business rider discounts on select ride types.
             </p>
           )}
         </div>
 
-        {/* Business Guarantee row */}
+        {/* Business Guarantee add-on card */}
         <div className="border-t border-border">
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => onNavigate("business-guarantee")}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onNavigate("business-guarantee");
+              }
+            }}
+            className="cursor-pointer px-4 py-3.5 transition-colors active:bg-muted"
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success">
-              <Shield size={14} className="text-success-foreground" />
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success">
+                <Shield size={16} className="text-success-foreground" />
+              </div>
+              <div className="flex flex-1 flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    Business Guarantee
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    ${insight.price.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">/ ride</span>
+                  {insight.originalPrice !== null && (
+                    <span className="text-xs text-muted-foreground line-through">
+                      ${insight.originalPrice.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+                {insight.discountEligible && (
+                  <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-md bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+                    Business discount applied
+                  </span>
+                )}
+                {!insight.discountEligible && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {"Discount unlocks when Business trips \u2265 80%."}
+                  </p>
+                )}
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  Covers cancellations, fare issues, and pickup delays.
+                </p>
+              </div>
+
+              {/* Toggle - stopPropagation prevents navigation */}
+              <div
+                className="flex shrink-0 flex-col items-center gap-1 pt-0.5"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <button
+                  role="switch"
+                  aria-checked={guaranteeOn}
+                  aria-label="Add Business Guarantee to this ride"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setGuaranteeOn(!guaranteeOn);
+                  }}
+                  className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                    guaranteeOn ? "bg-success" : "bg-border"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-background shadow-sm transition-transform ${
+                      guaranteeOn ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+                <span className="text-[10px] text-muted-foreground">
+                  {guaranteeOn ? "Added" : "Add"}
+                </span>
+              </div>
             </div>
-            <span className="flex-1 text-sm font-semibold text-foreground">
-              Business Guarantee unlocked
-            </span>
-            <ChevronRight size={16} className="text-muted-foreground" />
-          </button>
+
+            {/* Inline cost preview when toggle is ON */}
+            {guaranteeOn && (
+              <div className="mt-3 flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                <span className="text-xs font-medium text-foreground">
+                  Added: +${insight.price.toFixed(2)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Est. coverage: up to $5 credit
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -195,17 +278,13 @@ export default function RideOptionsScreen({
               >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${
-                    ride.selected
-                      ? "bg-foreground"
-                      : "bg-muted"
+                    ride.selected ? "bg-foreground" : "bg-muted"
                   }`}
                 >
                   <Icon
                     size={20}
                     className={
-                      ride.selected
-                        ? "text-background"
-                        : "text-foreground"
+                      ride.selected ? "text-background" : "text-foreground"
                     }
                   />
                 </div>
@@ -223,7 +302,7 @@ export default function RideOptionsScreen({
                   </span>
                 </div>
                 <span className="text-sm font-semibold text-foreground">
-                  {ride.price}
+                  ${ride.price.toFixed(2)}
                 </span>
               </button>
               {idx < rides.length - 1 && (
@@ -236,11 +315,16 @@ export default function RideOptionsScreen({
 
       {/* Bottom CTA */}
       <div className="fixed bottom-16 left-0 right-0 border-t border-border bg-background px-5 py-4">
+        {guaranteeOn && (
+          <p className="mb-1.5 text-center text-xs font-medium text-success">
+            Includes Business Guarantee
+          </p>
+        )}
         <button
           onClick={() => onNavigate("confirmation")}
           className="w-full rounded-xl bg-foreground py-3.5 text-center text-sm font-semibold text-background transition-opacity active:opacity-80"
         >
-          Confirm UberX - $12.45
+          Confirm UberX - ${confirmPrice}
         </button>
       </div>
     </div>
