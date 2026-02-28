@@ -73,7 +73,10 @@ export default function AppShell() {
           />
         )}
         {screen === "confirmation" && (
-          <ConfirmationScreen onNavigate={navigate} />
+          <ConfirmationScreen
+            onNavigate={navigate}
+            guaranteeOn={guaranteeOn}
+          />
         )}
         {screen === "activity" && (
           <ActivityScreen onNavigate={navigate} />

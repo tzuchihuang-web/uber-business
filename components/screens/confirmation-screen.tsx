@@ -7,21 +7,28 @@ import {
   CreditCard,
   Star,
   ChevronRight,
+  Shield,
 } from "lucide-react";
+import { getRiderInsight } from "@/lib/rider";
 
 interface ConfirmationScreenProps {
   onNavigate: (screen: string) => void;
+  guaranteeOn: boolean;
 }
 
-const receiptItems = [
-  { label: "Trip fare", value: "$10.80" },
-  { label: "Booking fee", value: "$1.65" },
-  { label: "Promotions", value: "-$0.00" },
-];
+const BASE_PRICE = 12.45;
+const TRIP_FARE = 10.80;
+const BOOKING_FEE = 1.65;
+const PROMOTIONS = 0.00;
+const insight = getRiderInsight();
 
 export default function ConfirmationScreen({
   onNavigate,
+  guaranteeOn,
 }: ConfirmationScreenProps) {
+  const guaranteePrice = insight.price;
+  const totalPrice = TRIP_FARE + BOOKING_FEE - PROMOTIONS + (guaranteeOn ? guaranteePrice : 0);
+
   return (
     <div className="flex flex-col pb-20">
       {/* Success header */}
@@ -130,14 +137,27 @@ export default function ConfirmationScreen({
           Receipt
         </h2>
         <ul className="flex flex-col gap-3">
-          {receiptItems.map((item, idx) => (
-            <li key={idx} className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                {item.label}
+          <li className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Trip fare</span>
+            <span className="text-sm text-foreground">${TRIP_FARE.toFixed(2)}</span>
+          </li>
+          <li className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Booking fee</span>
+            <span className="text-sm text-foreground">${BOOKING_FEE.toFixed(2)}</span>
+          </li>
+          <li className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Promotions</span>
+            <span className="text-sm text-foreground">-${PROMOTIONS.toFixed(2)}</span>
+          </li>
+          {guaranteeOn && (
+            <li className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Shield size={13} className="text-success" />
+                Business Guarantee
               </span>
-              <span className="text-sm text-foreground">{item.value}</span>
+              <span className="text-sm text-foreground">+${guaranteePrice.toFixed(2)}</span>
             </li>
-          ))}
+          )}
         </ul>
         <div className="my-3 h-px bg-border" />
         <div className="flex items-center justify-between">
@@ -145,9 +165,14 @@ export default function ConfirmationScreen({
             Total
           </span>
           <span className="text-sm font-semibold text-foreground">
-            $12.45
+            ${totalPrice.toFixed(2)}
           </span>
         </div>
+        {guaranteeOn && (
+          <p className="mt-2 text-xs font-medium text-success">
+            Including Business Guarantee protection
+          </p>
+        )}
       </div>
 
       {/* Payment method */}
