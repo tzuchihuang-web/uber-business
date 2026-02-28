@@ -1,11 +1,24 @@
 "use client";
 
-import { ArrowLeft, Users, Zap, Car, Shield } from "lucide-react";
+import {
+  ArrowLeft,
+  Users,
+  Zap,
+  Car,
+  Shield,
+  ChevronRight,
+  Sparkles,
+  TrendingUp,
+  BadgeCheck,
+} from "lucide-react";
+import { getRiderInsight } from "@/lib/rider";
 
 interface RideOptionsScreenProps {
   onNavigate: (screen: string) => void;
   onBack: () => void;
 }
+
+const insight = getRiderInsight();
 
 const rides = [
   {
@@ -94,6 +107,74 @@ export default function RideOptionsScreen({
               350 5th Ave, New York
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Rider Insight Card */}
+      <div className="mx-5 mb-4 overflow-hidden rounded-2xl border border-border bg-card">
+        {/* Top section */}
+        <div className="px-4 pt-4 pb-3">
+          <div className="flex items-center gap-1.5 pb-2">
+            <TrendingUp size={13} className="text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">
+              Based on your ride history
+            </span>
+          </div>
+
+          {/* Primary badge */}
+          {insight.primaryBadge && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-2.5 py-1 text-xs font-semibold text-background">
+              <BadgeCheck size={13} />
+              {insight.primaryBadge}
+            </span>
+          )}
+
+          {/* Big percentage */}
+          <p className="mt-3 flex items-baseline gap-1.5">
+            <span className="text-3xl font-bold tracking-tight text-foreground">
+              {insight.businessPct}
+            </span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Business
+            </span>
+          </p>
+
+          {/* Sub-badge or fallback */}
+          {insight.subBadge && (
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+              <Sparkles size={12} className="text-accent" />
+              {insight.subBadge}
+            </span>
+          )}
+          {insight.fallbackMessage && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {insight.fallbackMessage}
+            </p>
+          )}
+
+          {/* Discount footnote */}
+          {insight.discountEligible && (
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              You qualify for business rider discounts on select
+              ride types.
+            </p>
+          )}
+        </div>
+
+        {/* Business Guarantee row */}
+        <div className="border-t border-border">
+          <button
+            onClick={() => onNavigate("business-guarantee")}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success">
+              <Shield size={14} className="text-success-foreground" />
+            </div>
+            <span className="flex-1 text-sm font-semibold text-foreground">
+              Business Guarantee unlocked
+            </span>
+            <ChevronRight size={16} className="text-muted-foreground" />
+          </button>
         </div>
       </div>
 
