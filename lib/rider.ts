@@ -19,6 +19,12 @@ export interface RiderInsight {
   fallbackMessage: string | null;
   /** Formatted percentage string, e.g. "93%" */
   businessPct: string;
+  /** Per-ride price after potential discount */
+  price: number;
+  /** Original price before discount (null if no discount) */
+  originalPrice: number | null;
+  /** True when labeledShare < 0.2 — hides purpose data */
+  lowLabelWarning: boolean;
 }
 
 export function getRiderInsight(
@@ -48,11 +54,21 @@ export function getRiderInsight(
 
   const businessPct = `${Math.round(r.businessShare * 100)}%`;
 
+  const BASE_PRICE = 0.99;
+  const DISCOUNT_PRICE = 0.79;
+  const price = discountEligible ? DISCOUNT_PRICE : BASE_PRICE;
+  const originalPrice = discountEligible ? BASE_PRICE : null;
+
+  const lowLabelWarning = r.labeledShare < 0.2;
+
   return {
     primaryBadge,
     discountEligible,
     subBadge,
     fallbackMessage,
     businessPct,
+    price,
+    originalPrice,
+    lowLabelWarning,
   };
 }
