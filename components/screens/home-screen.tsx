@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Shield,
   BadgeCheck,
+  Plane,
 } from "lucide-react";
 import { useUser } from "@/lib/user-context";
 import { getGreeting } from "@/lib/types";
@@ -77,15 +78,22 @@ export default function HomeScreen({
       }
     }
 
-    // Add fallback suggestions if needed
+    // Add fallback suggestions if needed (Chicago airports)
     if (items.length < 3) {
       const fallbacks = [
         {
-          icon: Clock,
-          title: "Airport - JFK",
-          subtitle: "John F. Kennedy Intl Airport",
+          icon: Plane,
+          title: "O'Hare Airport",
+          subtitle: "O'Hare International Airport",
           pickup: "Current Location",
-          dropoff: "JFK Airport",
+          dropoff: "O'Hare International Airport",
+        },
+        {
+          icon: Plane,
+          title: "Midway Airport",
+          subtitle: "Midway International Airport",
+          pickup: "Current Location",
+          dropoff: "Midway International Airport",
         },
       ];
       for (const fb of fallbacks) {
@@ -100,6 +108,9 @@ export default function HomeScreen({
   }, [currentUser, insights.frequentRoutes]);
 
   const businessPct = Math.round(insights.businessShare * 100);
+
+  // Empty state for new users
+  const isNewUser = trips.length === 0;
 
   return (
     <div className="flex flex-col pb-20">
@@ -144,8 +155,23 @@ export default function HomeScreen({
         </button>
       </div>
 
-      {/* Insights summary card */}
-      {trips.length > 0 && (
+      {/* New User Empty State */}
+      {isNewUser && (
+        <div className="mx-5 mb-5 rounded-xl border border-dashed border-border bg-muted/50 p-6 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <TrendingUp size={20} className="text-muted-foreground" />
+          </div>
+          <h3 className="mb-1 text-sm font-semibold text-foreground">
+            No rides yet
+          </h3>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Take your first ride to start building your personalized insights and unlock business discounts.
+          </p>
+        </div>
+      )}
+
+      {/* Insights summary card - only show for users with trips */}
+      {!isNewUser && (
         <div className="mx-5 mb-5 rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 pb-2">
             <TrendingUp size={13} className="text-muted-foreground" />
@@ -187,7 +213,7 @@ export default function HomeScreen({
             <div className="mt-3 flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2">
               <Shield size={14} className="text-success" />
               <span className="text-xs font-medium text-success">
-                Business Guarantee discount unlocked
+                Guarantee Fee discount unlocked
               </span>
             </div>
           )}
@@ -248,8 +274,8 @@ export default function HomeScreen({
           <div className="flex flex-1 flex-col gap-0.5">
             <span className="text-sm font-semibold text-foreground">
               {insights.discountEligible
-                ? "Business Guarantee Active"
-                : "RideSense for Business"}
+                ? "Guarantee Fee Active"
+                : "Uber for Business"}
             </span>
             <span className="text-xs leading-relaxed text-muted-foreground">
               {insights.discountEligible

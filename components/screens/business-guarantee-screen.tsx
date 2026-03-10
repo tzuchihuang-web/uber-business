@@ -64,7 +64,7 @@ export default function BusinessGuaranteeScreen({
           <ArrowLeft size={20} className="text-foreground" />
         </button>
         <h1 className="text-lg font-bold text-foreground">
-          Business Guarantee
+          Guarantee Fee
         </h1>
       </header>
 
@@ -74,8 +74,8 @@ export default function BusinessGuaranteeScreen({
           Rides your team can count on
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-background/70">
-          RideSense Business guarantees ride availability, transparent
-          pricing, and centralized billing for your entire organization.
+          Uber Guarantee Fee protects your rides with guaranteed availability,
+          transparent pricing, and coverage for cancellations and delays.
         </p>
 
         {/* Price display */}
@@ -160,7 +160,7 @@ export default function BusinessGuaranteeScreen({
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground">
-                Add Business Guarantee
+                Add Guarantee Fee
               </span>
               <span className="text-xs text-muted-foreground">
                 to this ride
