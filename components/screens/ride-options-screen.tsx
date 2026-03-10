@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   ArrowLeft,
   Users,
@@ -12,9 +12,17 @@ import {
   BadgeCheck,
   ChevronDown,
   Lightbulb,
+  MapPin,
 } from "lucide-react";
 import { useUser } from "@/lib/user-context";
 import { TripPurpose, shouldRecommendGuarantee } from "@/lib/types";
+import {
+  filterLocations,
+  getDistanceBetweenLocations,
+  rideOptions,
+  calculateFare,
+  Location,
+} from "@/lib/locations";
 
 interface RideState {
   pickup: string;
@@ -43,49 +51,6 @@ const PURPOSES: TripPurpose[] = [
   "Other",
 ];
 
-const rides = [
-  {
-    id: "uberx",
-    name: "UberX",
-    desc: "Affordable rides",
-    time: "4 min",
-    priceMultiplier: 1,
-    icon: Car,
-  },
-  {
-    id: "comfort",
-    name: "Comfort",
-    desc: "Newer cars, extra legroom",
-    time: "6 min",
-    priceMultiplier: 1.46,
-    icon: Car,
-  },
-  {
-    id: "xl",
-    name: "UberXL",
-    desc: "Affordable rides for groups",
-    time: "8 min",
-    priceMultiplier: 1.83,
-    icon: Users,
-  },
-  {
-    id: "black",
-    name: "Black",
-    desc: "Premium rides in luxury cars",
-    time: "5 min",
-    priceMultiplier: 2.81,
-    icon: Shield,
-  },
-  {
-    id: "green",
-    name: "Green",
-    desc: "Electric or hybrid vehicles",
-    time: "7 min",
-    priceMultiplier: 1.13,
-    icon: Zap,
-  },
-];
-
 export default function RideOptionsScreen({
   onNavigate,
   onBack,
@@ -95,9 +60,69 @@ export default function RideOptionsScreen({
   const { insights, currentUser } = useUser();
   const [selectedRide, setSelectedRide] = useState("uberx");
   const [showPurposeDropdown, setShowPurposeDropdown] = useState(false);
+  
+  // Autocomplete state
+  const [pickupSuggestions, setPickupSuggestions] = useState<Location[]>([]);
+  const [dropoffSuggestions, setDropoffSuggestions] = useState<Location[]>([]);
+  const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
+  const [showDropoffSuggestions, setShowDropoffSuggestions] = useState(false);
+  const pickupRef = useRef<HTMLDivElement>(null);
+  const dropoffRef = useRef<HTMLDivElement>(null);
 
-  // Calculate base fare from ride state
-  const baseFare = rideState.fareEstimate || 12.45;
+  // Calculate distance when pickup/dropoff change
+  const distance = useMemo(() => {
+    if (!rideState.pickup || !rideState.dropoff) return 5.0;
+    return getDistanceBetweenLocations(rideState.pickup, rideState.dropoff);
+  }, [rideState.pickup, rideState.dropoff]);
+
+  // Update miles in ride state when distance changes
+  useEffect(() => {
+    if (distance !== rideState.miles) {
+      updateRideState({ miles: distance });
+    }
+  }, [distance, rideState.miles, updateRideState]);
+
+  // Handle pickup input change
+  const handlePickupChange = (value: string) => {
+    updateRideState({ pickup: value });
+    const suggestions = filterLocations(value);
+    setPickupSuggestions(suggestions);
+    setShowPickupSuggestions(suggestions.length > 0);
+  };
+
+  // Handle dropoff input change
+  const handleDropoffChange = (value: string) => {
+    updateRideState({ dropoff: value });
+    const suggestions = filterLocations(value);
+    setDropoffSuggestions(suggestions);
+    setShowDropoffSuggestions(suggestions.length > 0);
+  };
+
+  // Select a pickup location
+  const selectPickup = (location: Location) => {
+    updateRideState({ pickup: location.name });
+    setShowPickupSuggestions(false);
+  };
+
+  // Select a dropoff location
+  const selectDropoff = (location: Location) => {
+    updateRideState({ dropoff: location.name });
+    setShowDropoffSuggestions(false);
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pickupRef.current && !pickupRef.current.contains(event.target as Node)) {
+        setShowPickupSuggestions(false);
+      }
+      if (dropoffRef.current && !dropoffRef.current.contains(event.target as Node)) {
+        setShowDropoffSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Get the guarantee recommendation
   const guaranteeRec = useMemo(() => {
@@ -110,17 +135,32 @@ export default function RideOptionsScreen({
     );
   }, [rideState.pickup, rideState.dropoff, rideState.purpose, rideState.category, insights]);
 
-  // Calculate final price with guarantee
-  const selectedRideData = rides.find((r) => r.id === selectedRide) || rides[0];
-  const ridePrice = baseFare * selectedRideData.priceMultiplier;
+  // Calculate fares for all ride options
+  const fares = useMemo(() => {
+    return rideOptions.map((option) => ({
+      ...option,
+      fare: calculateFare(option, distance),
+    }));
+  }, [distance]);
+
+  // Get selected ride data
+  const selectedRideData = fares.find((r) => r.id === selectedRide) || fares[0];
+  const ridePrice = selectedRideData.fare;
   const confirmPrice = rideState.guaranteeOn
     ? (ridePrice + insights.price).toFixed(2)
     : ridePrice.toFixed(2);
 
   const handleConfirm = () => {
-    updateRideState({ fareEstimate: ridePrice });
+    updateRideState({ fareEstimate: ridePrice, miles: distance });
     onNavigate("confirmation");
   };
+
+  // Map ride options to UI format
+  const rides = [
+    { ...fares[0], icon: Car, time: fares[0].eta, desc: fares[0].description },
+    { ...fares[1], icon: Car, time: fares[1].eta, desc: fares[1].description },
+    { ...fares[2], icon: Shield, time: fares[2].eta, desc: fares[2].description },
+  ];
 
   return (
     <div className="flex flex-col pb-32">
@@ -136,7 +176,7 @@ export default function RideOptionsScreen({
         <h1 className="text-lg font-bold text-foreground">Choose a ride</h1>
       </header>
 
-      {/* Route summary - Editable */}
+      {/* Route summary - With Autocomplete */}
       <div className="mx-5 mb-4 flex items-center gap-3 rounded-xl bg-muted px-4 py-3">
         <div className="flex flex-col items-center gap-1">
           <div className="h-2.5 w-2.5 rounded-full bg-foreground" />
@@ -144,26 +184,80 @@ export default function RideOptionsScreen({
           <div className="h-2.5 w-2.5 rounded-sm bg-foreground" />
         </div>
         <div className="flex flex-1 flex-col gap-3">
-          <div>
+          {/* Pickup Input with Autocomplete */}
+          <div ref={pickupRef} className="relative">
             <input
               type="text"
               value={rideState.pickup}
-              onChange={(e) => updateRideState({ pickup: e.target.value })}
-              placeholder="Current Location"
+              onChange={(e) => handlePickupChange(e.target.value)}
+              onFocus={() => {
+                const suggestions = filterLocations(rideState.pickup);
+                setPickupSuggestions(suggestions);
+                setShowPickupSuggestions(suggestions.length > 0);
+              }}
+              placeholder="Enter pickup location"
               className="w-full bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
+            {showPickupSuggestions && pickupSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 z-20 mt-2 w-[calc(100%+40px)] -ml-4 rounded-xl border border-border bg-card py-1 shadow-lg">
+                {pickupSuggestions.map((loc) => (
+                  <button
+                    key={loc.name}
+                    onClick={() => selectPickup(loc)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted"
+                  >
+                    <MapPin size={14} className="text-muted-foreground" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-foreground">{loc.name}</span>
+                      <span className="text-xs text-muted-foreground">{loc.address}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+          
           <div className="h-px bg-border" />
-          <div>
+          
+          {/* Dropoff Input with Autocomplete */}
+          <div ref={dropoffRef} className="relative">
             <input
               type="text"
               value={rideState.dropoff}
-              onChange={(e) => updateRideState({ dropoff: e.target.value })}
-              placeholder="Destination"
+              onChange={(e) => handleDropoffChange(e.target.value)}
+              onFocus={() => {
+                const suggestions = filterLocations(rideState.dropoff);
+                setDropoffSuggestions(suggestions);
+                setShowDropoffSuggestions(suggestions.length > 0);
+              }}
+              placeholder="Enter destination"
               className="w-full bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
+            {showDropoffSuggestions && dropoffSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 z-20 mt-2 w-[calc(100%+40px)] -ml-4 rounded-xl border border-border bg-card py-1 shadow-lg">
+                {dropoffSuggestions.map((loc) => (
+                  <button
+                    key={loc.name}
+                    onClick={() => selectDropoff(loc)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted"
+                  >
+                    <MapPin size={14} className="text-muted-foreground" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-foreground">{loc.name}</span>
+                      <span className="text-xs text-muted-foreground">{loc.address}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Distance indicator */}
+      <div className="mx-5 mb-4 flex items-center justify-between rounded-lg bg-muted/50 px-4 py-2">
+        <span className="text-xs text-muted-foreground">Estimated distance</span>
+        <span className="text-xs font-medium text-foreground">{distance.toFixed(1)} mi</span>
       </div>
 
       {/* Trip Category & Purpose */}
@@ -286,7 +380,7 @@ export default function RideOptionsScreen({
           </div>
         )}
 
-        {/* Business Guarantee add-on card */}
+        {/* Guarantee Fee add-on card */}
         <div className="border-t border-border">
           <div
             role="button"
@@ -301,15 +395,13 @@ export default function RideOptionsScreen({
             className="cursor-pointer px-4 py-3.5 transition-colors active:bg-muted"
           >
             <div className="flex items-start gap-3">
-              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                guaranteeRec.recommend ? "bg-success" : "bg-success"
-              }`}>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success">
                 <Shield size={16} className="text-success-foreground" />
               </div>
               <div className="flex flex-1 flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-foreground">
-                    Business Guarantee
+                    Guarantee Fee
                   </span>
                   {guaranteeRec.recommend && (
                     <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
@@ -352,7 +444,7 @@ export default function RideOptionsScreen({
                 <button
                   role="switch"
                   aria-checked={rideState.guaranteeOn}
-                  aria-label="Add Business Guarantee to this ride"
+                  aria-label="Add Guarantee Fee to this ride"
                   onClick={(e) => {
                     e.stopPropagation();
                     updateRideState({ guaranteeOn: !rideState.guaranteeOn });
@@ -395,7 +487,6 @@ export default function RideOptionsScreen({
       <ul className="flex flex-col px-5 pt-2">
         {rides.map((ride, idx) => {
           const Icon = ride.icon;
-          const price = (baseFare * ride.priceMultiplier).toFixed(2);
           const isSelected = ride.id === selectedRide;
           return (
             <li key={ride.id}>
@@ -431,7 +522,7 @@ export default function RideOptionsScreen({
                   </span>
                 </div>
                 <span className="text-sm font-semibold text-foreground">
-                  ${price}
+                  ${ride.fare.toFixed(2)}
                 </span>
               </button>
               {idx < rides.length - 1 && (
@@ -446,12 +537,13 @@ export default function RideOptionsScreen({
       <div className="fixed bottom-16 left-0 right-0 mx-auto max-w-md border-t border-border bg-background px-5 py-4">
         {rideState.guaranteeOn && (
           <p className="mb-1.5 text-center text-xs font-medium text-success">
-            Includes Business Guarantee
+            Includes Guarantee Fee
           </p>
         )}
         <button
           onClick={handleConfirm}
-          className="w-full rounded-xl bg-foreground py-3.5 text-center text-sm font-semibold text-background transition-opacity active:opacity-80"
+          disabled={!rideState.pickup || !rideState.dropoff}
+          className="w-full rounded-xl bg-foreground py-3.5 text-center text-sm font-semibold text-background transition-opacity disabled:opacity-50 active:opacity-80"
         >
           Confirm {selectedRideData.name} - ${confirmPrice}
         </button>

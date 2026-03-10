@@ -4,6 +4,7 @@ export interface Profile {
   id: string;
   full_name: string;
   email: string;
+  password?: string; // For demo authentication
   home_label: string;
   home_address: string;
   work_label: string;

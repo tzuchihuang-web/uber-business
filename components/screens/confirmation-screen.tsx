@@ -147,7 +147,7 @@ export default function ConfirmationScreen({
             <li className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Shield size={13} className="text-success" />
-                Business Guarantee
+                Guarantee Fee
               </span>
               <span className="text-sm text-foreground">
                 +${insights.price.toFixed(2)}
@@ -164,7 +164,7 @@ export default function ConfirmationScreen({
         </div>
         {rideState.guaranteeOn && (
           <p className="mt-2 text-xs font-medium text-success">
-            Including Business Guarantee protection
+            Including Guarantee Fee protection
           </p>
         )}
       </div>

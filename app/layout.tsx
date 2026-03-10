@@ -8,8 +8,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "RideSense",
-  description: "Your ride app that learns how you move. Smart ride insights and business guarantee.",
+  title: "Uber",
+  description: "Request a ride, hop in, and go. Your smart ride companion with personalized insights.",
 };
 
 export const viewport: Viewport = {

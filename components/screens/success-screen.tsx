@@ -2,7 +2,7 @@
 
 import { useUser } from "@/lib/user-context";
 import { TripPurpose } from "@/lib/types";
-import { CheckCircle, TrendingUp, Shield, ArrowRight } from "lucide-react";
+import { CheckCircle, TrendingUp, Shield, ArrowRight, MapPin } from "lucide-react";
 
 interface RideState {
   pickup: string;
@@ -20,7 +20,7 @@ interface SuccessScreenProps {
 }
 
 export default function SuccessScreen({ rideState, onDone }: SuccessScreenProps) {
-  const { insights, currentUser } = useUser();
+  const { insights } = useUser();
   
   const businessPct = Math.round(insights.businessShare * 100);
   const totalTrips = insights.totalTrips;
@@ -58,17 +58,26 @@ export default function SuccessScreen({ rideState, onDone }: SuccessScreenProps)
           <span className="truncate">{rideState.dropoff || "Destination"}</span>
         </div>
         
-        <div className="flex items-center justify-between border-t border-border pt-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Purpose:</span>
-            <span className="text-sm font-medium text-foreground">{rideState.purpose}</span>
+        {/* Distance and Purpose row */}
+        <div className="mb-3 flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1.5">
+            <MapPin size={14} className="text-muted-foreground" />
+            <span className="text-muted-foreground">{rideState.miles.toFixed(1)} mi</span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Purpose:</span>
+            <span className="font-medium text-foreground">{rideState.purpose}</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between border-t border-border pt-3">
+          <span className="text-sm text-muted-foreground">Total fare</span>
           <div className="text-right">
             <span className="text-lg font-semibold text-foreground">
               ${rideState.fareEstimate.toFixed(2)}
             </span>
             {rideState.guaranteeOn && (
-              <span className="ml-1 text-xs text-success">+ Guarantee</span>
+              <span className="ml-1 text-xs text-success">+ Fee</span>
             )}
           </div>
         </div>
@@ -108,7 +117,7 @@ export default function SuccessScreen({ rideState, onDone }: SuccessScreenProps)
               </span>
               <span className="text-xs text-muted-foreground">
                 {insights.discountEligible
-                  ? "You qualify for Business Guarantee discounts!"
+                  ? "You qualify for Guarantee Fee discounts!"
                   : "Keep riding to unlock more benefits"}
               </span>
             </div>

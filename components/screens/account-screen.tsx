@@ -106,7 +106,7 @@ export default function AccountScreen({ onNavigate, onLogout }: AccountScreenPro
         {insights.discountEligible && (
           <div className="mt-3 rounded-lg bg-success/10 px-3 py-2">
             <span className="text-xs font-medium text-success">
-              Business Guarantee discount active: $0.79/ride
+              Guarantee Fee discount active: $0.79/ride
             </span>
           </div>
         )}
@@ -115,7 +115,7 @@ export default function AccountScreen({ onNavigate, onLogout }: AccountScreenPro
       {/* Divider */}
       <div className="h-2 bg-muted" />
 
-      {/* Business CTA */}
+      {/* Guarantee Fee CTA */}
       <button
         onClick={() => onNavigate("business-guarantee")}
         className="mx-5 mt-5 mb-5 flex items-center gap-4 rounded-xl bg-foreground p-4 text-left transition-opacity active:opacity-90"
@@ -123,7 +123,7 @@ export default function AccountScreen({ onNavigate, onLogout }: AccountScreenPro
         <Shield size={20} className="text-background" />
         <div className="flex flex-1 flex-col">
           <span className="text-sm font-semibold text-background">
-            Business Guarantee
+            Guarantee Fee
           </span>
           <span className="text-xs text-background/70">
             {insights.discountEligible
