@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import {
   ArrowLeft,
   Users,
@@ -9,18 +10,38 @@ import {
   Sparkles,
   TrendingUp,
   BadgeCheck,
+  ChevronDown,
+  Lightbulb,
 } from "lucide-react";
-import { getRiderInsight } from "@/lib/rider";
+import { useUser } from "@/lib/user-context";
+import { TripPurpose, shouldRecommendGuarantee } from "@/lib/types";
+
+interface RideState {
+  pickup: string;
+  dropoff: string;
+  category: "business" | "personal";
+  purpose: TripPurpose;
+  fareEstimate: number;
+  miles: number;
+  guaranteeOn: boolean;
+}
 
 interface RideOptionsScreenProps {
   onNavigate: (screen: string) => void;
   onBack: () => void;
-  guaranteeOn: boolean;
-  setGuaranteeOn: (value: boolean) => void;
+  rideState: RideState;
+  updateRideState: (updates: Partial<RideState>) => void;
 }
 
-const insight = getRiderInsight();
-const BASE_RIDE_PRICE = 12.45;
+const PURPOSES: TripPurpose[] = [
+  "Meeting",
+  "Airport",
+  "Commute",
+  "Errand",
+  "Dinner",
+  "Shopping",
+  "Other",
+];
 
 const rides = [
   {
@@ -28,60 +49,81 @@ const rides = [
     name: "UberX",
     desc: "Affordable rides",
     time: "4 min",
-    price: BASE_RIDE_PRICE,
+    priceMultiplier: 1,
     icon: Car,
-    selected: true,
   },
   {
     id: "comfort",
     name: "Comfort",
     desc: "Newer cars, extra legroom",
     time: "6 min",
-    price: 18.2,
+    priceMultiplier: 1.46,
     icon: Car,
-    selected: false,
   },
   {
     id: "xl",
     name: "UberXL",
     desc: "Affordable rides for groups",
     time: "8 min",
-    price: 22.8,
+    priceMultiplier: 1.83,
     icon: Users,
-    selected: false,
   },
   {
     id: "black",
     name: "Black",
     desc: "Premium rides in luxury cars",
     time: "5 min",
-    price: 35.0,
+    priceMultiplier: 2.81,
     icon: Shield,
-    selected: false,
   },
   {
     id: "green",
     name: "Green",
     desc: "Electric or hybrid vehicles",
     time: "7 min",
-    price: 14.1,
+    priceMultiplier: 1.13,
     icon: Zap,
-    selected: false,
   },
 ];
 
 export default function RideOptionsScreen({
   onNavigate,
   onBack,
-  guaranteeOn,
-  setGuaranteeOn,
+  rideState,
+  updateRideState,
 }: RideOptionsScreenProps) {
-  const confirmPrice = guaranteeOn
-    ? (BASE_RIDE_PRICE + insight.price).toFixed(2)
-    : BASE_RIDE_PRICE.toFixed(2);
+  const { insights, currentUser } = useUser();
+  const [selectedRide, setSelectedRide] = useState("uberx");
+  const [showPurposeDropdown, setShowPurposeDropdown] = useState(false);
+
+  // Calculate base fare from ride state
+  const baseFare = rideState.fareEstimate || 12.45;
+
+  // Get the guarantee recommendation
+  const guaranteeRec = useMemo(() => {
+    return shouldRecommendGuarantee(
+      rideState.pickup,
+      rideState.dropoff,
+      rideState.purpose,
+      rideState.category,
+      insights
+    );
+  }, [rideState.pickup, rideState.dropoff, rideState.purpose, rideState.category, insights]);
+
+  // Calculate final price with guarantee
+  const selectedRideData = rides.find((r) => r.id === selectedRide) || rides[0];
+  const ridePrice = baseFare * selectedRideData.priceMultiplier;
+  const confirmPrice = rideState.guaranteeOn
+    ? (ridePrice + insights.price).toFixed(2)
+    : ridePrice.toFixed(2);
+
+  const handleConfirm = () => {
+    updateRideState({ fareEstimate: ridePrice });
+    onNavigate("confirmation");
+  };
 
   return (
-    <div className="flex flex-col pb-20">
+    <div className="flex flex-col pb-32">
       {/* Header */}
       <header className="flex items-center gap-3 px-5 pt-14 pb-4">
         <button
@@ -94,7 +136,7 @@ export default function RideOptionsScreen({
         <h1 className="text-lg font-bold text-foreground">Choose a ride</h1>
       </header>
 
-      {/* Route summary */}
+      {/* Route summary - Editable */}
       <div className="mx-5 mb-4 flex items-center gap-3 rounded-xl bg-muted px-4 py-3">
         <div className="flex flex-col items-center gap-1">
           <div className="h-2.5 w-2.5 rounded-full bg-foreground" />
@@ -103,16 +145,82 @@ export default function RideOptionsScreen({
         </div>
         <div className="flex flex-1 flex-col gap-3">
           <div>
-            <p className="text-sm font-medium text-foreground">
-              Current Location
-            </p>
+            <input
+              type="text"
+              value={rideState.pickup}
+              onChange={(e) => updateRideState({ pickup: e.target.value })}
+              placeholder="Current Location"
+              className="w-full bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
           </div>
           <div className="h-px bg-border" />
           <div>
-            <p className="text-sm font-medium text-foreground">
-              350 5th Ave, New York
-            </p>
+            <input
+              type="text"
+              value={rideState.dropoff}
+              onChange={(e) => updateRideState({ dropoff: e.target.value })}
+              placeholder="Destination"
+              className="w-full bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
           </div>
+        </div>
+      </div>
+
+      {/* Trip Category & Purpose */}
+      <div className="mx-5 mb-4 flex gap-3">
+        {/* Category Toggle */}
+        <div className="flex flex-1 rounded-xl bg-muted p-1">
+          <button
+            onClick={() => updateRideState({ category: "business" })}
+            className={`flex-1 rounded-lg py-2 text-xs font-medium transition-colors ${
+              rideState.category === "business"
+                ? "bg-foreground text-background"
+                : "text-muted-foreground"
+            }`}
+          >
+            Business
+          </button>
+          <button
+            onClick={() => updateRideState({ category: "personal" })}
+            className={`flex-1 rounded-lg py-2 text-xs font-medium transition-colors ${
+              rideState.category === "personal"
+                ? "bg-foreground text-background"
+                : "text-muted-foreground"
+            }`}
+          >
+            Personal
+          </button>
+        </div>
+
+        {/* Purpose Dropdown */}
+        <div className="relative flex-1">
+          <button
+            onClick={() => setShowPurposeDropdown(!showPurposeDropdown)}
+            className="flex w-full items-center justify-between rounded-xl bg-muted px-3 py-2.5 text-xs font-medium text-foreground"
+          >
+            <span>{rideState.purpose}</span>
+            <ChevronDown size={14} className="text-muted-foreground" />
+          </button>
+          {showPurposeDropdown && (
+            <div className="absolute top-full left-0 z-10 mt-1 w-full rounded-xl border border-border bg-card py-1 shadow-lg">
+              {PURPOSES.map((purpose) => (
+                <button
+                  key={purpose}
+                  onClick={() => {
+                    updateRideState({ purpose });
+                    setShowPurposeDropdown(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-xs transition-colors hover:bg-muted ${
+                    rideState.purpose === purpose
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {purpose}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -128,17 +236,17 @@ export default function RideOptionsScreen({
           </div>
 
           {/* Primary badge */}
-          {insight.primaryBadge && (
+          {insights.primaryBadge && (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-2.5 py-1 text-xs font-semibold text-background">
               <BadgeCheck size={13} />
-              {insight.primaryBadge}
+              {insights.primaryBadge}
             </span>
           )}
 
           {/* Big percentage */}
           <p className="mt-3 flex items-baseline gap-1.5">
             <span className="text-3xl font-bold tracking-tight text-foreground">
-              {insight.businessPct}
+              {Math.round(insights.businessShare * 100)}%
             </span>
             <span className="text-sm font-medium text-muted-foreground">
               Business
@@ -146,25 +254,37 @@ export default function RideOptionsScreen({
           </p>
 
           {/* Sub-badge or fallback */}
-          {insight.subBadge && (
+          {insights.subBadge && (
             <span className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
               <Sparkles size={12} className="text-accent" />
-              {insight.subBadge}
+              {insights.subBadge}
             </span>
           )}
-          {insight.fallbackMessage && (
+          {insights.fallbackMessage && (
             <p className="mt-2 text-xs text-muted-foreground">
-              {insight.fallbackMessage}
+              {insights.fallbackMessage}
             </p>
           )}
 
           {/* Discount footnote */}
-          {insight.discountEligible && (
+          {insights.discountEligible && (
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
               You qualify for business rider discounts on select ride types.
             </p>
           )}
         </div>
+
+        {/* Recommendation banner */}
+        {guaranteeRec.recommend && (
+          <div className="border-t border-border bg-success/5 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Lightbulb size={14} className="text-success" />
+              <span className="text-xs font-medium text-success">
+                Recommended: {guaranteeRec.reason}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Business Guarantee add-on card */}
         <div className="border-t border-border">
@@ -181,7 +301,9 @@ export default function RideOptionsScreen({
             className="cursor-pointer px-4 py-3.5 transition-colors active:bg-muted"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success">
+              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                guaranteeRec.recommend ? "bg-success" : "bg-success"
+              }`}>
                 <Shield size={16} className="text-success-foreground" />
               </div>
               <div className="flex flex-1 flex-col gap-1">
@@ -189,24 +311,29 @@ export default function RideOptionsScreen({
                   <span className="text-sm font-semibold text-foreground">
                     Business Guarantee
                   </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">
-                    ${insight.price.toFixed(2)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">/ ride</span>
-                  {insight.originalPrice !== null && (
-                    <span className="text-xs text-muted-foreground line-through">
-                      ${insight.originalPrice.toFixed(2)}
+                  {guaranteeRec.recommend && (
+                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                      Recommended
                     </span>
                   )}
                 </div>
-                {insight.discountEligible && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    ${insights.price.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">/ ride</span>
+                  {insights.originalPrice !== null && (
+                    <span className="text-xs text-muted-foreground line-through">
+                      ${insights.originalPrice.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+                {insights.discountEligible && (
                   <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-md bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
                     Business discount applied
                   </span>
                 )}
-                {!insight.discountEligible && (
+                {!insights.discountEligible && (
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {"Discount unlocks when Business trips \u2265 80%."}
                   </p>
@@ -224,33 +351,33 @@ export default function RideOptionsScreen({
               >
                 <button
                   role="switch"
-                  aria-checked={guaranteeOn}
+                  aria-checked={rideState.guaranteeOn}
                   aria-label="Add Business Guarantee to this ride"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setGuaranteeOn(!guaranteeOn);
+                    updateRideState({ guaranteeOn: !rideState.guaranteeOn });
                   }}
                   className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
-                    guaranteeOn ? "bg-success" : "bg-border"
+                    rideState.guaranteeOn ? "bg-success" : "bg-border"
                   }`}
                 >
                   <span
                     className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-background shadow-sm transition-transform ${
-                      guaranteeOn ? "translate-x-5" : "translate-x-0"
+                      rideState.guaranteeOn ? "translate-x-5" : "translate-x-0"
                     }`}
                   />
                 </button>
                 <span className="text-[10px] text-muted-foreground">
-                  {guaranteeOn ? "Added" : "Add"}
+                  {rideState.guaranteeOn ? "Added" : "Add"}
                 </span>
               </div>
             </div>
 
             {/* Inline cost preview when toggle is ON */}
-            {guaranteeOn && (
+            {rideState.guaranteeOn && (
               <div className="mt-3 flex items-center justify-between rounded-lg bg-muted px-3 py-2">
                 <span className="text-xs font-medium text-foreground">
-                  Added: +${insight.price.toFixed(2)}
+                  Added: +${insights.price.toFixed(2)}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   Est. coverage: up to $5 credit
@@ -268,23 +395,25 @@ export default function RideOptionsScreen({
       <ul className="flex flex-col px-5 pt-2">
         {rides.map((ride, idx) => {
           const Icon = ride.icon;
+          const price = (baseFare * ride.priceMultiplier).toFixed(2);
+          const isSelected = ride.id === selectedRide;
           return (
             <li key={ride.id}>
               <button
-                onClick={() => onNavigate("confirmation")}
+                onClick={() => setSelectedRide(ride.id)}
                 className={`flex w-full items-center gap-4 rounded-xl py-3.5 text-left transition-colors active:bg-muted ${
-                  ride.selected ? "bg-muted" : ""
+                  isSelected ? "bg-muted" : ""
                 }`}
               >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${
-                    ride.selected ? "bg-foreground" : "bg-muted"
+                    isSelected ? "bg-foreground" : "bg-muted"
                   }`}
                 >
                   <Icon
                     size={20}
                     className={
-                      ride.selected ? "text-background" : "text-foreground"
+                      isSelected ? "text-background" : "text-foreground"
                     }
                   />
                 </div>
@@ -302,7 +431,7 @@ export default function RideOptionsScreen({
                   </span>
                 </div>
                 <span className="text-sm font-semibold text-foreground">
-                  ${ride.price.toFixed(2)}
+                  ${price}
                 </span>
               </button>
               {idx < rides.length - 1 && (
@@ -314,17 +443,17 @@ export default function RideOptionsScreen({
       </ul>
 
       {/* Bottom CTA */}
-      <div className="fixed bottom-16 left-0 right-0 border-t border-border bg-background px-5 py-4">
-        {guaranteeOn && (
+      <div className="fixed bottom-16 left-0 right-0 mx-auto max-w-md border-t border-border bg-background px-5 py-4">
+        {rideState.guaranteeOn && (
           <p className="mb-1.5 text-center text-xs font-medium text-success">
             Includes Business Guarantee
           </p>
         )}
         <button
-          onClick={() => onNavigate("confirmation")}
+          onClick={handleConfirm}
           className="w-full rounded-xl bg-foreground py-3.5 text-center text-sm font-semibold text-background transition-opacity active:opacity-80"
         >
-          Confirm UberX - ${confirmPrice}
+          Confirm {selectedRideData.name} - ${confirmPrice}
         </button>
       </div>
     </div>
