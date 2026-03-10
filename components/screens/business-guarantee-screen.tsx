@@ -6,12 +6,12 @@ import {
   CreditCard,
   BarChart3,
   Users,
-  CheckCircle2,
   AlertTriangle,
   Sparkles,
   BadgeCheck,
+  TrendingUp,
 } from "lucide-react";
-import { getRiderInsight } from "@/lib/rider";
+import { useUser } from "@/lib/user-context";
 
 interface BusinessGuaranteeScreenProps {
   onNavigate: (screen: string) => void;
@@ -19,8 +19,6 @@ interface BusinessGuaranteeScreenProps {
   guaranteeOn: boolean;
   setGuaranteeOn: (value: boolean) => void;
 }
-
-const insight = getRiderInsight();
 
 const features = [
   {
@@ -51,6 +49,8 @@ export default function BusinessGuaranteeScreen({
   guaranteeOn,
   setGuaranteeOn,
 }: BusinessGuaranteeScreenProps) {
+  const { insights } = useUser();
+  const businessPct = Math.round(insights.businessShare * 100);
 
   return (
     <div className="flex flex-col pb-32">
@@ -74,24 +74,24 @@ export default function BusinessGuaranteeScreen({
           Rides your team can count on
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-background/70">
-          Uber for Business guarantees ride availability, transparent
+          RideSense Business guarantees ride availability, transparent
           pricing, and centralized billing for your entire organization.
         </p>
 
         {/* Price display */}
         <div className="mt-5 flex items-baseline gap-2">
           <span className="text-3xl font-bold text-background">
-            ${insight.price.toFixed(2)}
+            ${insights.price.toFixed(2)}
           </span>
           <span className="text-sm text-background/60">/ride</span>
-          {insight.originalPrice !== null && (
+          {insights.originalPrice !== null && (
             <span className="text-sm text-background/40 line-through">
-              ${insight.originalPrice.toFixed(2)}
+              ${insights.originalPrice.toFixed(2)}
             </span>
           )}
         </div>
 
-        {insight.discountEligible && (
+        {insights.discountEligible && (
           <span className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-success px-2.5 py-1 text-xs font-semibold text-success-foreground">
             <BadgeCheck size={12} />
             Business discount applied
@@ -99,18 +99,32 @@ export default function BusinessGuaranteeScreen({
         )}
       </div>
 
-      {/* Rider badges section */}
+      {/* Rider insights card */}
       <div className="mx-5 mb-4 rounded-2xl border border-border bg-card p-4">
-        {insight.primaryBadge && (
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-2.5 py-1 text-xs font-semibold text-background">
-            <BadgeCheck size={13} />
-            {insight.primaryBadge}
+        <div className="flex items-center gap-1.5 pb-3">
+          <TrendingUp size={13} className="text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">
+            Your rider profile
           </span>
-        )}
+        </div>
+
+        {/* Business percentage */}
+        <div className="flex items-center justify-between pb-3">
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold text-foreground">{businessPct}%</span>
+            <span className="text-sm text-muted-foreground">business trips</span>
+          </div>
+          {insights.primaryBadge && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-2.5 py-1 text-xs font-semibold text-background">
+              <BadgeCheck size={13} />
+              {insights.primaryBadge}
+            </span>
+          )}
+        </div>
 
         {/* Sub-badge or low-label warning */}
-        {insight.lowLabelWarning ? (
-          <div className="mt-3 flex items-start gap-2.5 rounded-xl bg-muted px-3 py-2.5">
+        {insights.lowLabelWarning ? (
+          <div className="flex items-start gap-2.5 rounded-xl bg-muted px-3 py-2.5">
             <AlertTriangle
               size={14}
               className="mt-0.5 shrink-0 text-muted-foreground"
@@ -119,12 +133,22 @@ export default function BusinessGuaranteeScreen({
               We couldn{"'"}t confirm top purposes due to limited labels.
             </p>
           </div>
-        ) : insight.subBadge ? (
-          <span className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+        ) : insights.subBadge ? (
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
             <Sparkles size={12} className="text-accent" />
-            {insight.subBadge}
+            {insights.subBadge}
           </span>
         ) : null}
+
+        {/* Discount eligibility info */}
+        {!insights.discountEligible && (
+          <div className="mt-3 rounded-xl bg-muted px-3 py-2.5">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Reach 80% business trips to unlock discounted guarantee rates.
+              You{"'"}re at {businessPct}% - {businessPct >= 70 ? "almost there!" : "keep riding!"}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Toggle card */}
@@ -164,11 +188,9 @@ export default function BusinessGuaranteeScreen({
         {/* Cost detail when toggle is on */}
         {guaranteeOn && (
           <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-            <span className="text-sm text-muted-foreground">
-              This ride
-            </span>
+            <span className="text-sm text-muted-foreground">This ride</span>
             <span className="text-sm font-bold text-foreground">
-              +${insight.price.toFixed(2)}
+              +${insights.price.toFixed(2)}
             </span>
           </div>
         )}
@@ -205,13 +227,13 @@ export default function BusinessGuaranteeScreen({
       </div>
 
       {/* Sticky bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-background px-5 pt-3 pb-8">
+      <div className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-md border-t border-border bg-background px-5 pt-3 pb-8">
         {guaranteeOn ? (
           <button
             onClick={() => onNavigate("confirmation")}
             className="w-full rounded-xl bg-foreground py-3.5 text-center text-sm font-semibold text-background transition-opacity active:opacity-80"
           >
-            Add to this ride &middot; ${insight.price.toFixed(2)}
+            Add to this ride &middot; ${insights.price.toFixed(2)}
           </button>
         ) : (
           <button
